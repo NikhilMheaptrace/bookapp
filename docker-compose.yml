@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - DATABASE_URL=postgresql://bookuser:IKUSnWPdzeifZKODfd6d@database-1.c9is24kqgb4e.ap-south-1.rds.amazonaws.com:5432/bookcollection?schema=public
+      - JWT_SECRET=e030a8b16c28111274004faafe850241f6b0d9a0a1634cf495adb68b3fcceddf663d79e2891b777ab733e9b5447fbfe0ffb2354b1371ce89f99420f281798b5e
+      - JWT_EXPIRES_IN=7d
+    networks:
+      - appnet
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80" # map Nginx port 80 to host 5173
+    environment:
+      - VITE_API_URL=http://backend:5000
+    depends_on:
+      - backend
+    networks:
+      - appnet
+networks:
+  appnet:
+    driver: bridge

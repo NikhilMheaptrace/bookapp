@@ -1,0 +1,23 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO
+      - IMAGE_TAG=$CODEBUILD_RESOLVED_SOURCE_VERSION
+  build:
+    commands:
+      - echo Building the frontend Docker image...
+      - docker build -t $ECR_REPO:$IMAGE_TAG -f frontend/dockerfile ./
+  post_build:
+    commands:
+      - echo Pushing the Docker image...
+      - docker push $ECR_REPO:$IMAGE_TAG
+      - printf '[{"name":"frontend","imageUri":"%s"}]' "$ECR_REPO:$IMAGE_TAG" > imagedefinitions.json
+artifacts:
+  files:
+    - imagedefinitions.json
+    - '**/*'
+  discard-paths: yes
+
