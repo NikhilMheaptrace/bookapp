@@ -1,0 +1,35 @@
+# Step 1: Build stage
+FROM node:20-alpine AS build
+
+# Install required packages for OpenSSL and Prisma CLI
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Install only what's needed for prisma generate
+COPY package*.json ./
+RUN npm install
+
+# Copy all project files
+COPY . .
+
+# Run prisma generate inside container (targeting Linux/MUSL)
+RUN npx prisma generate
+
+# Step 2: Final image for production
+FROM node:20-alpine
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Copy only what we need from build stage
+COPY package*.json ./
+RUN npm install --only=production
+
+COPY . .
+
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]

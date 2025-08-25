@@ -1,0 +1,15 @@
+project_name         = "my-app"
+aws_region          = "us-east-1"
+github_connection_arn = "arn:aws:codestar-connections:us-east-1:ACCOUNT_ID:connection/YOUR_CONNECTION_ID"
+github_owner        = "your-github-username"
+github_repo         = "your-repo-name"
+github_branch       = "main"
+vpc_cidr           = "10.0.0.0/16"
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+frontend_container_port = 80
+backend_container_port = 8080
+cpu                = "256"
+memory             = "512"
+frontend_desired_count = 2
+backend_desired_count = 2
