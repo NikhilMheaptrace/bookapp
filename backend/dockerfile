@@ -14,7 +14,8 @@ RUN npm install
 COPY . .
 
 # Run prisma generate inside container (targeting Linux/MUSL)
-RUN npx prisma generate dev
+RUN npx prisma generate
+RUN npx prisma migrate deploy
 
 # Step 2: Final image for production
 FROM node:20-alpine
