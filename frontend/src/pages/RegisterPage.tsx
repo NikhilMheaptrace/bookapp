@@ -17,7 +17,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://bookapp-alb-1482528446.ap-south-1.elb.amazonaws.com:5000';
+  const backendUrl = 'http://bookapp-alb-1482528446.ap-south-1.elb.amazonaws.com:5000';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
