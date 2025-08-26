@@ -1,5 +1,5 @@
 variable "project_name" {
-  description = "Project name for resource naming"
+  description = "BookApp"
   type        = string
   default     = "my-app"
 }
@@ -25,7 +25,7 @@ variable "private_subnet_cidrs" {
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-1"
+  default     = "ap-south-1"
 }
 
 variable "frontend_container_port" {
@@ -37,7 +37,7 @@ variable "frontend_container_port" {
 variable "backend_container_port" {
   description = "Port for the backend container"
   type        = number
-  default     = 8080
+  default     = 5000
 }
 
 variable "cpu" {
