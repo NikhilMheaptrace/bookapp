@@ -11,7 +11,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
 
-  const backendUrl = 'http://bookapp-alb-1482528446.ap-south-1.elb.amazonaws.com:5000';
+const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

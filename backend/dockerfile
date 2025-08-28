@@ -1,36 +1,43 @@
 # Step 1: Build stage
 FROM node:20-alpine AS build
 
-# Install required packages for OpenSSL and Prisma CLI
+# Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Install only what's needed for prisma generate
+# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install
 
-# Copy all project files
-COPY . .
-
-# Run prisma generate inside container (targeting Linux/MUSL)
+# Copy Prisma schema and generate client
+COPY prisma ./prisma
 RUN npx prisma generate
-RUN npx prisma migrate deploy
+
+# Copy source code and build (if using TypeScript)
+COPY . .
+RUN npm run build
 
 # Step 2: Final image for production
 FROM node:20-alpine
 
+# Install OpenSSL for Prisma runtime
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy only what we need from build stage
+# Copy package files and install production dependencies
 COPY package*.json ./
 RUN npm install --only=production
 
-COPY . .
+# Copy only necessary files from build stage
+COPY --from=build /app/dist ./dist 
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=build /app/server.js ./server.js
 
-
+# Expose port
 EXPOSE 5000
 
+# Start the application
 CMD ["node", "server.js"]
