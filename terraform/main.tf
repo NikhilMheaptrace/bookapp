@@ -22,7 +22,7 @@ resource "aws_secretsmanager_secret" "jwt_secret" {
 
 resource "aws_secretsmanager_secret_version" "jwt_secret" {
   secret_id     = aws_secretsmanager_secret.jwt_secret.id
-  secret_string = "my-secure-jwt-secret-1234567890" # Replace with secure value in production
+  secret_string = "my-secure-jwt-secret-1234567890"
 }
 
 # ---------------- VPC ----------------
@@ -111,38 +111,36 @@ resource "aws_security_group" "ecs_instances" {
   name        = "${local.name_prefix}-ecs-instances-sg"
   description = "Security group for ECS EC2 instances"
   vpc_id      = aws_vpc.main.id
-
   ingress {
     from_port       = 0
     to_port         = 0
     protocol        = "-1"
     security_groups = [aws_security_group.alb.id]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
   tags = {
     Name = "${local.name_prefix}-ecs-instances-sg"
   }
 }
 
-resource "aws_launch_configuration" "ecs" {
-  name_prefix          = "${local.name_prefix}-ecs-lc-"
-  image_id             = data.aws_ami.ecs_optimized.id
-  instance_type        = var.ec2_instance_type
-  iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
-  security_groups      = [aws_security_group.ecs_instances.id]
-
-  user_data = <<-EOF
+resource "aws_launch_template" "ecs" {
+  name_prefix            = "${local.name_prefix}-ecs-lt-"
+  image_id               = data.aws_ami.ecs_optimized.id
+  instance_type          = var.ec2_instance_type
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ecs_instance_profile.name
+  }
+  vpc_security_group_ids = [aws_security_group.ecs_instances.id]
+  user_data = base64encode(<<-EOF
               #!/bin/bash
               echo ECS_CLUSTER=${aws_ecs_cluster.this.name} >> /etc/ecs/ecs.config
               EOF
-
+  )
   lifecycle {
     create_before_destroy = true
   }
@@ -151,7 +149,6 @@ resource "aws_launch_configuration" "ecs" {
 data "aws_ami" "ecs_optimized" {
   most_recent = true
   owners      = ["amazon"]
-
   filter {
     name   = "name"
     values = ["amzn2-ami-ecs-hvm-*-x86_64-ebs"]
@@ -161,11 +158,13 @@ data "aws_ami" "ecs_optimized" {
 resource "aws_autoscaling_group" "ecs" {
   name                 = "${local.name_prefix}-ecs-asg"
   vpc_zone_identifier  = [for s in aws_subnet.public : s.id]
-  launch_configuration = aws_launch_configuration.ecs.name
   min_size             = var.ec2_min_size
   max_size             = var.ec2_max_size
   desired_capacity     = var.ec2_desired_capacity
-
+  launch_template {
+    id      = aws_launch_template.ecs.id
+    version = "$Latest"
+  }
   tag {
     key                 = "Name"
     value               = "${local.name_prefix}-ecs-instance"
@@ -605,6 +604,7 @@ resource "aws_ecs_task_definition" "frontend" {
           hostPort      = 0
         }
       ]
+      memory = 512
       environment = [
         {
           name  = "JWT_EXPIRES_IN"
@@ -646,13 +646,11 @@ resource "aws_ecs_service" "frontend" {
   task_definition = aws_ecs_task_definition.frontend.arn
   desired_count   = var.frontend_desired_count
   launch_type     = "EC2"
-
   load_balancer {
     target_group_arn = aws_lb_target_group.frontend.arn
     container_name   = "frontend"
     container_port   = var.frontend_container_port
   }
-
   depends_on = [aws_lb_listener.http]
 }
 
@@ -671,6 +669,7 @@ resource "aws_ecs_task_definition" "backend" {
           hostPort      = 0
         }
       ]
+      memory = 512
       environment = [
         {
           name  = "FRONTEND_URL"
@@ -712,13 +711,11 @@ resource "aws_ecs_service" "backend" {
   task_definition = aws_ecs_task_definition.backend.arn
   desired_count   = var.backend_desired_count
   launch_type     = "EC2"
-
   load_balancer {
     target_group_arn = aws_lb_target_group.backend.arn
     container_name   = "backend"
     container_port   = 5000
   }
-
   depends_on = [aws_lb_listener.backend]
 }
 
@@ -731,6 +728,7 @@ resource "aws_ecs_task_definition" "migrate" {
       name  = "migrate"
       image = "${aws_ecr_repository.backend.repository_url}:latest"
       essential = true
+      memory = 512
       environment = [
         {
           name  = "DATABASE_URL"

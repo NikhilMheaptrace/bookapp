@@ -1,42 +1,41 @@
-# Step 1: Build stage
+# Stage 1: Build stage
 FROM node:20-alpine AS build
 
-# Install OpenSSL for Prisma
+# Install openssl for Prisma
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy package.json and package-lock.json
 COPY package*.json ./
+
+# Install all dependencies (including devDependencies for Prisma)
 RUN npm install
 
 # Copy Prisma schema and generate client
 COPY prisma ./prisma
 RUN npx prisma generate
 
-# Copy source code and build (if using TypeScript)
+# Copy the rest of the application code
 COPY . .
-RUN npm run build
 
-# Step 2: Final image for production
+# Stage 2: Final image for production
 FROM node:20-alpine
-
-# Install OpenSSL for Prisma runtime
-RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy package files and install production dependencies
+# Copy package.json and package-lock.json
 COPY package*.json ./
-RUN npm install --only=production
 
-# Copy only necessary files from build stage
-COPY --from=build /app/dist ./dist 
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
-COPY --from=build /app/server.js ./server.js
+# Install only production dependencies
+RUN npm install --omit=dev
 
-# Expose port
+# Copy Prisma client and application code from build stage
+COPY --from=build /app/node_modules/@prisma/client /app/node_modules/@prisma/client
+COPY --from=build /app/prisma /app/prisma
+COPY --from=build /app .
+
+# Expose port 5000
 EXPOSE 5000
 
 # Start the application
